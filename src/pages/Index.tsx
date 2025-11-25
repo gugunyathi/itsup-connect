@@ -1,134 +1,136 @@
 import { useState } from "react";
 import { ConversationList } from "@/components/ConversationList";
 import { ChatArea } from "@/components/ChatArea";
-
-// Mock data
-const mockConversations = [
-  {
-    id: "1",
-    name: "Sarah Johnson",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah",
-    lastMessage: "Hey! Are we still on for lunch tomorrow?",
-    timestamp: "10:30 AM",
-    unread: 2,
-    online: true,
-  },
-  {
-    id: "2",
-    name: "Mike Chen",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Mike",
-    lastMessage: "Thanks for the help with the project!",
-    timestamp: "Yesterday",
-    online: true,
-  },
-  {
-    id: "3",
-    name: "Emily Rodriguez",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Emily",
-    lastMessage: "Did you see the game last night?",
-    timestamp: "Tuesday",
-    unread: 1,
-    online: false,
-  },
-  {
-    id: "4",
-    name: "Team Alpha",
-    avatar: "https://api.dicebear.com/7.x/initials/svg?seed=Team",
-    lastMessage: "Meeting rescheduled to 3 PM",
-    timestamp: "Monday",
-    online: false,
-  },
-];
-
-const mockMessages: Array<{
-  id: string;
-  message: string;
-  timestamp: string;
-  sent: boolean;
-  status?: "sent" | "delivered" | "read";
-}> = [
-  {
-    id: "1",
-    message: "Hey! How are you?",
-    timestamp: "10:25 AM",
-    sent: false,
-  },
-  {
-    id: "2",
-    message: "I'm doing great! Just finished working on the new design.",
-    timestamp: "10:26 AM",
-    sent: true,
-    status: "read",
-  },
-  {
-    id: "3",
-    message: "That's awesome! Can't wait to see it.",
-    timestamp: "10:28 AM",
-    sent: false,
-  },
-  {
-    id: "4",
-    message: "Are we still on for lunch tomorrow?",
-    timestamp: "10:30 AM",
-    sent: false,
-  },
-];
+import { CallDialog } from "@/components/CallDialog";
+import { useConversations } from "@/hooks/useConversations";
+import { useRealtimeMessages } from "@/hooks/useRealtimeMessages";
+import { useWebRTC } from "@/hooks/useWebRTC";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import { LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
-  const [activeConversation, setActiveConversation] = useState("1");
-  const [messages, setMessages] = useState(mockMessages);
+  const [activeConversation, setActiveConversation] = useState<string | null>(null);
+  const { conversations } = useConversations();
+  const { messages, sendMessage } = useRealtimeMessages(activeConversation);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const {
+    startCall,
+    endCall,
+    isInCall,
+    isCalling,
+    callType,
+    localStream,
+    remoteStream,
+  } = useWebRTC();
 
-  const activeConv = mockConversations.find((c) => c.id === activeConversation);
+  const activeConv = conversations.find((c) => c.id === activeConversation);
 
-  const handleSendMessage = (message: string) => {
-    const newMessage: {
-      id: string;
-      message: string;
-      timestamp: string;
-      sent: boolean;
-      status?: "sent" | "delivered" | "read";
-    } = {
-      id: Date.now().toString(),
-      message,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      sent: true,
-      status: "sent",
-    };
-    setMessages([...messages, newMessage]);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
+  const handleVoiceCall = () => {
+    if (activeConv?.other_user?.id) {
+      startCall("voice", activeConv.other_user.id);
+    }
+  };
+
+  const handleVideoCall = () => {
+    if (activeConv?.other_user?.id) {
+      startCall("video", activeConv.other_user.id);
+    }
+  };
+
+  const formattedConversations = conversations.map((conv) => ({
+    id: conv.id,
+    name: conv.other_user?.display_name || conv.name || "Unknown",
+    avatar: conv.other_user?.avatar_url,
+    lastMessage: conv.last_message?.content || "",
+    timestamp: conv.last_message
+      ? new Date(conv.last_message.created_at).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "",
+    online: conv.other_user?.online || false,
+  }));
+
+  const formattedMessages = messages.map((msg) => ({
+    id: msg.id,
+    message: msg.content,
+    timestamp: new Date(msg.created_at).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    sent: msg.sender_id === user?.id,
+    status: msg.status,
+  }));
+
   return (
-    <div className="flex h-screen overflow-hidden">
-      <div className="w-full md:w-96 border-r border-border">
-        <ConversationList
-          conversations={mockConversations}
-          activeId={activeConversation}
-          onSelect={setActiveConversation}
-        />
-      </div>
-      
-      <div className="flex-1 hidden md:flex">
-        {activeConv ? (
-          <ChatArea
-            conversation={{
-              id: activeConv.id,
-              name: activeConv.name,
-              avatar: activeConv.avatar,
-              status: activeConv.online ? "online" : "last seen recently",
-            }}
-            messages={messages}
-            onSendMessage={handleSendMessage}
-          />
-        ) : (
-          <div className="flex items-center justify-center w-full bg-muted">
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-primary mb-2">ItsUp</h2>
-              <p className="text-muted-foreground">Select a conversation to start chatting</p>
-            </div>
+    <>
+      <div className="flex h-screen overflow-hidden">
+        <div className="w-full md:w-96 border-r border-border flex flex-col">
+          <div className="p-4 border-b border-border flex items-center justify-between">
+            <h1 className="text-2xl font-bold text-primary">ItsUp</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
-        )}
+          <ConversationList
+            conversations={formattedConversations}
+            activeId={activeConversation || ""}
+            onSelect={setActiveConversation}
+          />
+        </div>
+
+        <div className="flex-1 hidden md:flex">
+          {activeConv ? (
+            <ChatArea
+              conversation={{
+                id: activeConv.id,
+                name: activeConv.other_user?.display_name || activeConv.name || "Unknown",
+                avatar: activeConv.other_user?.avatar_url,
+                status: activeConv.other_user?.online ? "online" : "last seen recently",
+              }}
+              messages={formattedMessages}
+              onSendMessage={sendMessage}
+              onVoiceCall={handleVoiceCall}
+              onVideoCall={handleVideoCall}
+            />
+          ) : (
+            <div className="flex items-center justify-center w-full bg-muted">
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-primary mb-2">ItsUp</h2>
+                <p className="text-muted-foreground">
+                  Select a conversation to start chatting
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+
+      <CallDialog
+        open={isInCall || isCalling}
+        onClose={endCall}
+        localStream={localStream}
+        remoteStream={remoteStream}
+        isVideo={callType === "video"}
+        isCalling={isCalling}
+        contactName={activeConv?.other_user?.display_name || "Unknown"}
+        contactAvatar={activeConv?.other_user?.avatar_url}
+      />
+    </>
   );
 };
 

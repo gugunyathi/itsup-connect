@@ -20,24 +20,17 @@ interface ChatAreaProps {
   };
   messages: Message[];
   onSendMessage: (message: string) => void;
+  onVoiceCall: () => void;
+  onVideoCall: () => void;
 }
 
-export const ChatArea = ({ conversation, messages, onSendMessage }: ChatAreaProps) => {
-  const { toast } = useToast();
-
-  const handleVoiceCall = () => {
-    toast({
-      title: "Voice Call",
-      description: `Starting voice call with ${conversation.name}...`,
-    });
-  };
-
-  const handleVideoCall = () => {
-    toast({
-      title: "Video Call",
-      description: `Starting video call with ${conversation.name}...`,
-    });
-  };
+export const ChatArea = ({ 
+  conversation, 
+  messages, 
+  onSendMessage, 
+  onVoiceCall, 
+  onVideoCall 
+}: ChatAreaProps) => {
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -45,8 +38,8 @@ export const ChatArea = ({ conversation, messages, onSendMessage }: ChatAreaProp
         name={conversation.name}
         avatar={conversation.avatar}
         status={conversation.status}
-        onVoiceCall={handleVoiceCall}
-        onVideoCall={handleVideoCall}
+        onVoiceCall={onVoiceCall}
+        onVideoCall={onVideoCall}
       />
       
       <div className="flex-1 overflow-y-auto p-4 space-y-1">
