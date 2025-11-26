@@ -67,6 +67,103 @@ export type Database = {
         }
         Relationships: []
       }
+      invitations: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          invite_token: string
+          invite_type: string
+          inviter_id: string
+          recipient_email: string | null
+          recipient_phone: string | null
+          status: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invite_token: string
+          invite_type: string
+          inviter_id: string
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          status?: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invite_token?: string
+          invite_type?: string
+          inviter_id?: string
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invite_links: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          link_token: string
+          link_type: string
+          max_uses: number | null
+          updated_at: string
+          use_count: number
+          user_id: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_token: string
+          link_type: string
+          max_uses?: number | null
+          updated_at?: string
+          use_count?: number
+          user_id: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          link_token?: string
+          link_type?: string
+          max_uses?: number | null
+          updated_at?: string
+          use_count?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invite_links_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
